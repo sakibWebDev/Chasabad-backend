@@ -1,28 +1,30 @@
-import { Response } from "express";
+import { Response } from 'express';
 
-
-
-export type IResponseData<T> = {
- httpStatusCode: number;
-    success: boolean;
-    message: string;
-    data?: T;
-
-  pagination?: {
+export interface IApiResponse<T> {
+  httpStatusCode: number;
+  success: boolean;
+  message?: string;
+  data?: T;
+  meta?: {
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   };
-};
-
-
-export const sendResponse = <T>(res: Response, responseData: IResponseData<T>) => {
-    const { httpStatusCode, success, message, data } = responseData;
-
-    res.status(httpStatusCode).json({
-        success,
-        message,
-        data
-    });
 }
+
+export const sendResponse = <T>(res: Response, data: IApiResponse<T>) => {
+  const responseData: any = {
+    success: data.success,
+    httpStatusCode: data.httpStatusCode,
+    message: data.message || "Success",
+    data: data.data || null,
+  };
+  
+  // Add meta if it exists
+  if (data.meta) {
+    responseData.meta = data.meta;
+  }
+  
+  res.status(data.httpStatusCode).json(responseData);
+};

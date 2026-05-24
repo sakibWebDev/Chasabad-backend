@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import SeedService from '../service/seeds.service';
 import { catchAsync } from '../../../shared/catchAsync';
-import { sendResponse } from '../../../shared/sendResponse';
+import { seedsSendResponse } from '../../../shared/seedssendResponse';
 
 // Create new seed
 export const createSeed = catchAsync(async (req: Request, res: Response) => {
-  // Parse data if coming from form-data
   let seedData;
   try {
     seedData = JSON.parse(req.body.data);
@@ -13,11 +12,11 @@ export const createSeed = catchAsync(async (req: Request, res: Response) => {
     seedData = req.body;
   }
   
-  const userId = req.user?.id;
+  const userId = (req.user as { id?: string })?.id;
   const result = await SeedService.createSeed(seedData, userId);
 
-  sendResponse(res, {
-    httpStatusCode: 201,
+  seedsSendResponse(res, {
+    statusCode: 201,
     success: true,
     message: "Seed created successfully",
     data: result,
@@ -26,25 +25,58 @@ export const createSeed = catchAsync(async (req: Request, res: Response) => {
 
 // Get all seeds with filters
 export const getAllSeeds = catchAsync(async (req: Request, res: Response) => {
-  const filters = req.query;
-  const result = await SeedService.getAllSeeds(filters);
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
+  const category = req.query.category as string;
+  const difficulty = req.query.difficulty as string;
+  const season = req.query.season_id as string;
+  const search = req.query.search as string;
+  const minPrice = req.query.minPrice ? Number(req.query.minPrice) : undefined;
+  const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : undefined;
+  const organic = req.query.organic === 'true';
+  const sortBy = (req.query.sortBy as string) || 'createdAt';
+  const sortOrder = (req.query.sortOrder as 'asc' | 'desc') || 'desc';
 
-  sendResponse(res, {
-    httpStatusCode: 200,
+  const result = await SeedService.getAllSeeds({
+    page,
+    limit,
+    category,
+    difficulty,
+    season,
+    search,
+    minPrice,
+    maxPrice,
+    organic,
+    sortBy,
+    sortOrder
+  });
+
+  // Create pagination meta from result
+  const paginationMeta = {
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+    hasNextPage: result.page < result.totalPages,
+    hasPrevPage: result.page > 1
+  };
+
+  seedsSendResponse(res, {
+    statusCode: 200,
     success: true,
     message: "Seeds retrieved successfully",
     data: result.data,
-    meta: result.pagination
+    meta: paginationMeta
   });
 });
 
 // Get single seed by ID
 export const getSeedById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const result = await SeedService.getSeedById(id);
 
-  sendResponse(res, {
-    httpStatusCode: 200,
+  seedsSendResponse(res, {
+    statusCode: 200,
     success: true,
     message: "Seed retrieved successfully",
     data: result,
@@ -53,9 +85,8 @@ export const getSeedById = catchAsync(async (req: Request, res: Response) => {
 
 // Update seed
 export const updateSeed = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   
-  // Parse update data
   let updateData;
   try {
     updateData = JSON.parse(req.body.data);
@@ -65,8 +96,8 @@ export const updateSeed = catchAsync(async (req: Request, res: Response) => {
   
   const result = await SeedService.updateSeed(id, updateData);
 
-  sendResponse(res, {
-    httpStatusCode: 200,
+  seedsSendResponse(res, {
+    statusCode: 200,
     success: true,
     message: "Seed updated successfully",
     data: result,
@@ -75,11 +106,11 @@ export const updateSeed = catchAsync(async (req: Request, res: Response) => {
 
 // Delete seed
 export const deleteSeed = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const result = await SeedService.deleteSeed(id);
 
-  sendResponse(res, {
-    httpStatusCode: 200,
+  seedsSendResponse(res, {
+    statusCode: 200,
     success: true,
     message: "Seed deleted successfully",
     data: result,
@@ -87,143 +118,143 @@ export const deleteSeed = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Get seeds by category
-// Controller
-export const getSeedsByCategory = catchAsync(
-  async (req: Request, res: Response) => {
-    const { category } = req.params;
+export const getSeedsByCategory = catchAsync(async (req: Request, res: Response) => {
+  const { category } = req.params as { category: string };
+  const skip = Number(req.query.skip) || 0;
+  const limit = Math.min(50, Number(req.query.limit) || 20);
 
-    const skip = Number(req.query.skip) || 0;
-    const limit = Number(req.query.limit) || 20;
+  const result = await SeedService.getSeedsByCategory(category, skip, limit);
 
-    const result = await SeedService.getSeedsByCategory(
-      category as string ,
-      skip,
-      limit
-    );
-
-    sendResponse(res, {
-      httpStatusCode: 200,
-      success: true,
-      message: "Seeds retrieved successfully by category",
-      data: result,
-    });
-  }
-);
+  seedsSendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Seeds retrieved successfully by category",
+    data: result,
+  });
+});
 
 // Get featured seeds
+export const getFeaturedSeeds = catchAsync(async (req: Request, res: Response) => {
+  const limit = Math.min(50, Number(req.query.limit) || 10);
+  const skip = Number(req.query.skip) || 0;
 
-export const getFeaturedSeeds = catchAsync(
-  async (req: Request, res: Response) => {
-    const limit = Number(req.query.limit) || 10;
-      const skip = Number(req.query.skip) || 0;
+  const result = await SeedService.getFeaturedSeeds(limit, skip);
 
-    const result = await SeedService.getFeaturedSeeds(limit, skip );
-
-    sendResponse(res, {
-      httpStatusCode: 200,
-      success: true,
-      message: "Featured seeds retrieved successfully",
-      data: result,
-    });
-  }
-);
+  seedsSendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Featured seeds retrieved successfully",
+    data: result,
+  });
+});
 
 // Search seeds
-// Controller
-export const searchSeeds = catchAsync(
-  async (req: Request, res: Response) => {
-    const { q } = req.query;
+export const searchSeeds = catchAsync(async (req: Request, res: Response) => {
+  const { q } = req.query;
 
-    if (!q) {
-      return sendResponse(res, {
-        httpStatusCode: 400,
-        success: false,
-        message: "Search keyword is required",
-        data: null,
-      });
-    }
-
-    const skip = Math.max(
-      0,
-      Number(req.query.skip) || 0
-    );
-
-    const limit = Math.max(
-      1,
-      Math.min(Number(req.query.limit) || 20, 50)
-    );
-
-    const result = await SeedService.searchSeeds(
-      q as string,
-      skip,
-      limit
-    );
-
-    sendResponse(res, {
-      httpStatusCode: 200,
-      success: true,
-      message: "Search results retrieved successfully",
-      data: result,
+  if (!q) {
+    return seedsSendResponse(res, {
+      statusCode: 400,
+      success: false,
+      message: "Search keyword is required",
+      data: null,
     });
   }
-);
+
+  const skip = Math.max(0, Number(req.query.skip) || 0);
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+
+  const result = await SeedService.searchSeeds(q as string, skip, limit);
+
+  seedsSendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Search results retrieved successfully",
+    data: result,
+  });
+});
+
 // Get seeds by difficulty
-export const getSeedsByDifficulty = catchAsync(
-  async (req: Request, res: Response) => {
-    const { difficulty } = req.params;
+export const getSeedsByDifficulty = catchAsync(async (req: Request, res: Response) => {
+  const { difficulty } = req.params as { difficulty: 'EASY' | 'MEDIUM' | 'HARD' };
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
 
-    const page = Number(req.query.page) || 1;
+  const result = await SeedService.getAllSeeds({
+    difficulty: difficulty,
+    page,
+    limit,
+  });
 
-    const limit = Math.max(
-      1,
-      Math.min(Number(req.query.limit) || 20, 50)
-    );
+  const paginationMeta = {
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+    hasNextPage: result.page < result.totalPages,
+    hasPrevPage: result.page > 1
+  };
 
-    const result = await SeedService.getAllSeeds({
-      difficulty: difficulty as any,
-      page,
-      limit,
-    });
-
-    sendResponse(res, {
-      httpStatusCode: 200,
-      success: true,
-      message: "Seeds retrieved successfully by difficulty",
-      data: result.data,
-      pagination: result.pagination,
-    });
-  }
-);
+  seedsSendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Seeds retrieved successfully by difficulty",
+    data: result.data,
+    meta: paginationMeta
+  });
+});
 
 // Get seeds by season
 export const getSeedsBySeason = catchAsync(async (req: Request, res: Response) => {
-  const { seasonId } = req.params;
-  const { limit } = req.query;
+  const { seasonId } = req.params as { seasonId: string };
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
   
   const result = await SeedService.getAllSeeds({
-    season: seasonId as any,
-    limit: Number(limit)
+    season: seasonId,
+    page,
+    limit
   });
 
-  sendResponse(res, {
-    httpStatusCode: 200,
+  const paginationMeta = {
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: result.totalPages,
+    hasNextPage: result.page < result.totalPages,
+    hasPrevPage: result.page > 1
+  };
+
+  seedsSendResponse(res, {
+    statusCode: 200,
     success: true,
     message: "Seeds retrieved successfully by season",
     data: result.data,
+    meta: paginationMeta
   });
 });
 
 // Get statistics
-// Controller
-export const getStatistics = catchAsync(
-  async (req: Request, res: Response) => {
-    const result = await SeedService.getStatistics();
+export const getStatistics = catchAsync(async (req: Request, res: Response) => {
+  const result = await SeedService.getStatistics();
 
-    sendResponse(res, {
-      httpStatusCode: 200,
-      success: true,
-      message: "Statistics retrieved successfully",
-      data: result,
-    });
-  }
-);
+  seedsSendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Statistics retrieved successfully",
+    data: result,
+  });
+});
+
+// seeds.controller.ts - এড করুন
+
+export const getAllCounts = catchAsync(async (req: Request, res: Response) => {
+  const result = await SeedService.getAllCounts();
+
+  seedsSendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "All counts retrieved successfully",
+    data: result,
+  });
+});
