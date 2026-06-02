@@ -34,6 +34,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
+    "@types/ejs": "^3.1.5",
     "@types/express": "^5.0.6",
     "@types/http-status": "^1.1.2",
     "@types/http-status-codes": "^1.2.0",

@@ -4,6 +4,12 @@ import { Request, Response } from 'express';
 import { OrderService } from '../services/order.service';
 import { OrderStatus, PaymentStatus } from '../../../../generated/prisma/enums';
 
+// Helper function to get string param from request params
+const getStringParam = (param: string | string[] | undefined): string | null => {
+  if (!param) return null;
+  return Array.isArray(param) ? param[0] : param;
+};
+
 // Create new order
 export const createOrder = async (req: Request, res: Response) => {
   try {
@@ -48,6 +54,7 @@ export const createOrder = async (req: Request, res: Response) => {
     
     const order = await OrderService.createOrder(userId, email, {
       userId,
+      email,
       items,
       total_amount,
       discount,
@@ -130,7 +137,16 @@ export const getUserOrders = async (req: Request, res: Response) => {
 // Get order by ID
 export const getOrderById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    // FIX: Handle string | string[] type
+    const id = getStringParam(req.params.id);
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+    
     const order = await OrderService.getOrderById(id);
     
     if (!order) {
@@ -168,7 +184,16 @@ export const getOrderById = async (req: Request, res: Response) => {
 // Get order by orderId (Public tracking)
 export const getOrderByOrderId = async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.params as { orderId: string };
+    // FIX: Handle string | string[] type
+    const orderId = getStringParam(req.params.orderId);
+    
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+    
     const order = await OrderService.getOrderByOrderId(orderId);
     
     if (!order) {
@@ -204,7 +229,16 @@ export const getOrderByOrderId = async (req: Request, res: Response) => {
 // Update order status (Admin only)
 export const updateOrderStatus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    // FIX: Handle string | string[] type
+    const id = getStringParam(req.params.id);
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+    
     const { status } = req.body;
     
     if (!status || !Object.values(OrderStatus).includes(status)) {
@@ -233,7 +267,16 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 // Update payment status (Admin only)
 export const updatePaymentStatus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    // FIX: Handle string | string[] type
+    const id = getStringParam(req.params.id);
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+    
     const { paymentStatus } = req.body;
     
     if (!paymentStatus || !Object.values(PaymentStatus).includes(paymentStatus)) {
@@ -262,7 +305,16 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
 // Update tracking number (Admin only)
 export const updateTrackingNumber = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    // FIX: Handle string | string[] type
+    const id = getStringParam(req.params.id);
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+    
     const { trackingNumber } = req.body;
     
     const order = await OrderService.updateTrackingNumber(id, trackingNumber);
@@ -284,7 +336,16 @@ export const updateTrackingNumber = async (req: Request, res: Response) => {
 // Cancel order
 export const cancelOrder = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    // FIX: Handle string | string[] type
+    const id = getStringParam(req.params.id);
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+    
     const order = await OrderService.getOrderById(id);
     
     if (!order) {
@@ -332,7 +393,16 @@ export const cancelOrder = async (req: Request, res: Response) => {
 // Delete order (Admin only)
 export const deleteOrder = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    // FIX: Handle string | string[] type
+    const id = getStringParam(req.params.id);
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+    
     await OrderService.deleteOrder(id);
     
     res.status(200).json({
