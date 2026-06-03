@@ -7,14 +7,13 @@ import { IUserListResponse } from "../types";
 const getUsers = async (
   page: number,
   limit: number,
-  where: unknown
-): Promise<IUserListResponse<unknown>> => {
+  where: any  // ✅ Fixed: Changed from 'unknown' to 'any'
+): Promise<IUserListResponse<any>> => {  // ✅ Fixed: Changed from 'unknown' to 'any'
   const skip = (page - 1) * limit;
   
-
   const [users, total] = await Promise.all([
     prisma.user.findMany({
-      where,
+      where,  // ✅ Now works properly
       skip,
       take: limit,
       orderBy: {
@@ -43,7 +42,7 @@ const getUsers = async (
       },
     }),
 
-    prisma.user.count({ where }),
+    prisma.user.count({ where }),  // ✅ Now works properly
   ]);
   
   return {
@@ -57,12 +56,9 @@ const getUsers = async (
   };
 };
 
-
-
 const getUserById = async (id: string) => {
   const user = await prisma.user.findUnique({
     where: { id },
-
     select: {
       id: true,
       name: true,
@@ -80,14 +76,11 @@ const getUserById = async (id: string) => {
       longitude: true,
       createdAt: true,
       updatedAt: true,
-
       orders: {
         take: 10,
-
         orderBy: {
           createdAt: "desc",
         },
-
         include: {
           items: {
             include: {
@@ -102,14 +95,11 @@ const getUserById = async (id: string) => {
           },
         },
       },
-
       reviews: {
         take: 10,
-
         orderBy: {
           createdAt: "desc",
         },
-
         include: {
           seed: {
             select: {
@@ -136,9 +126,7 @@ const updateUser = async (
 ) => {
   const user = await prisma.user.update({
     where: { id },
-
     data: updateData,
-
     select: {
       id: true,
       name: true,
@@ -157,7 +145,6 @@ const updateUser = async (
 const deleteUser = async (id: string) => {
   const user = await prisma.user.update({
     where: { id },
-
     data: {
       isDeleted: true,
       deletedAt: new Date(),
@@ -177,11 +164,9 @@ const updateUserStatus = async (
 ) => {
   const user = await prisma.user.update({
     where: { id },
-
     data: {
       status,
     },
-
     select: {
       id: true,
       name: true,
@@ -192,7 +177,6 @@ const updateUserStatus = async (
 
   return user;
 };
-
 
 export const createUser = async (payload: {
   name: string;
@@ -206,10 +190,8 @@ export const createUser = async (payload: {
   district?: string;
   division?: string;
   postalCode?: string;
-
   latitude?: number | null;
   longitude?: number | null;
-
   emailVerified?: boolean;
   needPasswordChange?: boolean;
 }) => {
@@ -238,40 +220,25 @@ export const createUser = async (payload: {
   }
 
   // 3. hash password
-  const hashedPassword = await bcrypt.hash(
-    payload.password,
-    10
-  );
+  const hashedPassword = await bcrypt.hash(payload.password, 10);
 
   // 4. create user
   const user = await prisma.user.create({
     data: {
       name: payload.name,
       email: payload.email,
-
       role: payload.role || Role.USER,
-
       phone: payload.phone || null,
-
-      status:
-        payload.status || UserStatus.ACTIVE,
-
+      status: payload.status || UserStatus.ACTIVE,
       address: payload.address || null,
       city: payload.city || null,
       district: payload.district || null,
       division: payload.division || null,
-      postalCode:
-        payload.postalCode || null,
-
+      postalCode: payload.postalCode || null,
       latitude: payload.latitude || null,
-      longitude:
-        payload.longitude || null,
-
-      emailVerified:
-        payload.emailVerified ?? true,
-
-      needPasswordChange:
-        payload.needPasswordChange ?? true,
+      longitude: payload.longitude || null,
+      emailVerified: payload.emailVerified ?? true,
+      needPasswordChange: payload.needPasswordChange ?? true,
     },
   });
 
@@ -279,11 +246,8 @@ export const createUser = async (payload: {
   await prisma.account.create({
     data: {
       accountId: crypto.randomUUID(),
-
       userId: user.id,
-
       providerId: payload.email,
-
       password: hashedPassword,
     },
   });
@@ -296,24 +260,18 @@ export const createUser = async (payload: {
     role: user.role,
     phone: user.phone,
     status: user.status,
-
     address: user.address,
     city: user.city,
     district: user.district,
     division: user.division,
     postalCode: user.postalCode,
-
     emailVerified: user.emailVerified,
-    needPasswordChange:
-      user.needPasswordChange,
-
+    needPasswordChange: user.needPasswordChange,
     createdAt: user.createdAt,
   };
 };
 
-
 // ================= BACKEND UPDATE USER =================
-
 
 export const updatedUser = async (
   id: string,
@@ -323,18 +281,14 @@ export const updatedUser = async (
     role?: Role;
     phone?: string;
     status?: UserStatus;
-
     image?: string;
-
     address?: string;
     city?: string;
     district?: string;
     division?: string;
     postalCode?: string;
-
     latitude?: number | null;
     longitude?: number | null;
-
     emailVerified?: boolean;
     needPasswordChange?: boolean;
   }
@@ -349,100 +303,73 @@ export const updatedUser = async (
   }
 
   // 2. email check
-  if (
-    payload.email &&
-    payload.email !== existingUser.email
-  ) {
-    const emailExists =
-      await prisma.user.findUnique({
-        where: {
-          email: payload.email,
-        },
-      });
+  if (payload.email && payload.email !== existingUser.email) {
+    const emailExists = await prisma.user.findUnique({
+      where: {
+        email: payload.email,
+      },
+    });
 
     if (emailExists) {
-      throw new Error(
-        "Email already exists"
-      );
+      throw new Error("Email already exists");
     }
   }
 
   // 3. phone check
-  if (
-    payload.phone &&
-    payload.phone !== existingUser.phone
-  ) {
-    const phoneExists =
-      await prisma.user.findUnique({
-        where: {
-          phone: payload.phone,
-        },
-      });
+  if (payload.phone && payload.phone !== existingUser.phone) {
+    const phoneExists = await prisma.user.findUnique({
+      where: {
+        phone: payload.phone,
+      },
+    });
 
     if (phoneExists) {
-      throw new Error(
-        "Phone already exists"
-      );
+      throw new Error("Phone already exists");
     }
   }
 
   // 4. update user
-  const updatedUser =
-    await prisma.user.update({
-      where: { id },
-
-      data: {
-        name: payload.name,
-        email: payload.email,
-        role: payload.role,
-        phone: payload.phone,
-        status: payload.status,
-
-        image: payload.image,
-
-        address: payload.address,
-        city: payload.city,
-        district: payload.district,
-        division: payload.division,
-        postalCode: payload.postalCode,
-
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-
-        emailVerified:
-          payload.emailVerified,
-
-        needPasswordChange:
-          payload.needPasswordChange,
-      },
-
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        phone: true,
-        status: true,
-
-        image: true,
-
-        address: true,
-        city: true,
-        district: true,
-        division: true,
-        postalCode: true,
-
-        emailVerified: true,
-        needPasswordChange: true,
-
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: {
+      name: payload.name,
+      email: payload.email,
+      role: payload.role,
+      phone: payload.phone,
+      status: payload.status,
+      image: payload.image,
+      address: payload.address,
+      city: payload.city,
+      district: payload.district,
+      division: payload.division,
+      postalCode: payload.postalCode,
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      emailVerified: payload.emailVerified,
+      needPasswordChange: payload.needPasswordChange,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      phone: true,
+      status: true,
+      image: true,
+      address: true,
+      city: true,
+      district: true,
+      division: true,
+      postalCode: true,
+      emailVerified: true,
+      needPasswordChange: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
   return updatedUser;
 };
-
 
 export const AdminUserService = {
   getUsers,
