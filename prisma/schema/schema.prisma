@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client"
@@ -12,3 +7,909 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  USER
+  EXPERT
+  RESEARCHER
+}
+
+enum UserStatus {
+  BLOCKED
+  DELETED
+  ACTIVE
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum SunlightRequirement {
+  FULL_SUN
+  PARTIAL_SHADE
+  SHADE
+}
+
+enum WaterRequirement {
+  LOW
+  MODERATE
+  HIGH
+  FLOOD
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum SoilType {
+  CLAY
+  SANDY
+  LOAMY
+  SILTY
+  PEATY
+  CHALKY
+  LATERITE
+  ALLUVIAL
+  BLACK_COTTON
+  RED
+}
+
+enum IrrigationType {
+  DRIP
+  SPRINKLER
+  FLOOD
+  FURROW
+  RAIN_FED
+  CANAL
+  TUBE_WELL
+}
+
+enum FertilizerType {
+  ORGANIC
+  INORGANIC
+  COMPOST
+  GREEN_MANURE
+  CHEMICAL
+  BIO_FERTILIZER
+}
+
+enum DiseaseSeverity {
+  MILD
+  MODERATE
+  SEVERE
+  DEADLY
+}
+
+enum PestSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  EPIDEMIC
+}
+
+enum CropGrowthStage {
+  GERMINATION
+  SEEDLING
+  VEGETATIVE
+  FLOWERING
+  FRUITING
+  MATURATION
+  HARVESTING
+}
+
+model User {
+  id                 String         @id @default(cuid())
+  name               String
+  email              String         @unique
+  emailVerified      Boolean        @default(false)
+  role               Role           @default(USER)
+  status             UserStatus     @default(ACTIVE)
+  needPasswordChange Boolean        @default(false)
+  isDeleted          Boolean        @default(false)
+  deletedAt          DateTime?
+  image              String?
+
+  phone              String?        @unique
+  phoneVerified      DateTime?
+
+  address            String?
+  city               String?
+  district           String?
+  division           String?
+  postalCode         String?
+
+  latitude           Float?
+  longitude          Float?
+
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  sessions           Session[]
+  accounts           Account[]
+
+  orders             Order[]
+  reviews            Review[]
+  savedSeeds         UserSavedSeed[]
+  queries            Query[]
+  expertAdviceExpert ExpertAdvice[] @relation("ExpertAdviceExpert")
+  expertAdviceUser   ExpertAdvice[] @relation("ExpertAdviceUser")
+  soilTests          SoilTest[]
+  cropPlans          CropPlan[]
+  notifications      Notification[]
+  leadingGroups      FarmerGroup[]  @relation("GroupLeader")
+  memberGroups       FarmerGroup[]  @relation("GroupMembers")
+  sensorData         SensorData[]
+
+  @@index([phone])
+  @@index([role])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+model Season {
+  id                    String          @id @default(cuid())
+  seasonId              String          @unique
+  title                 String
+  title_en              String
+  description           String
+  description_en        String
+  season                String
+  seasonCode            String          @unique
+  bengali_months        String[]
+  bangla_months_details Json?
+  planting_months       String[]
+  harvesting_period     String
+  soil_type             String
+  soil_type_enum        SoilType?
+  water_requirements    String
+  irrigation_type       IrrigationType?
+  icon                  String
+  color                 String
+  temperature_min       Float?
+  temperature_max       Float?
+  humidity_range        String?
+  rainfall_range        String?
+  wind_speed_range      String?
+  average_daylight      Int?
+  suitable_crops_count  Int?            @default(0)
+  challenges            String[]
+  tips                  String[]
+  festivals             String[]
+  government_schemes    String[]
+
+  seeds                 Seed[]
+  cropPlans             CropPlan[]
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([seasonId])
+  @@index([season])
+  @@index([seasonCode])
+  @@map("seasons")
+}
+
+model Seed {
+  id                          String              @id @default(cuid())
+  seedId                      String              @unique
+  name                        String
+  name_en                     String
+  scientific_name             String
+  category                    String
+  sub_category                String?
+
+  season_id                   String
+  season                      Season              @relation(fields: [season_id], references: [id])
+
+  image                       String
+  image_gallery               String[]
+  video_url                   String?
+  icon                        String
+  variety_type                String?
+  origin_country              String?
+  origin_region               String?
+  year_of_introduction        Int?
+
+  germination_time            String
+  germination_days            Int?
+  maturity_time               String
+  maturity_days               Int?
+  spacing                     String
+  depth                       String
+  depth_cm                    Float?
+  sunlight                    SunlightRequirement
+  watering                    WaterRequirement
+  difficulty                  Difficulty
+
+  soil_type                   String
+  soil_type_enum              SoilType?
+  temperature                 String
+  temperature_min             Float?
+  temperature_max             Float?
+  rainfall                    String
+  rainfall_min_mm             Int?
+  rainfall_max_mm             Int?
+  ph_range                    String
+  ph_min                      Float?
+  ph_max                      Float?
+  altitude_range              String?
+  wind_tolerance              String?
+
+  yield_per_hectare           String
+  yield_min_kg                Int?
+  yield_max_kg                Int?
+  harvest_method              String
+  storage                     String
+  storage_days                Int?
+
+  benefits                    String[]
+  benefits_bn                 String[]
+  precautions                 String[]
+  precautions_bn              String[]
+
+  special_notes               String
+  special_notes_bn            String?
+  nutritional_value           Json?
+  medicinal_uses              String[]
+  commercial_uses             String[]
+  export_potential            Boolean?            @default(false)
+  organic_certified           Boolean?            @default(false)
+
+  market_price                Float?
+  seed_cost                   Float?
+  expected_profit             Float?
+
+  carbon_footprint            Float?
+  water_footprint             Int?
+  sustainable_practices       String[]
+
+  reviews                     Review[]
+  queries                     Query[]
+  expertAdvice                ExpertAdvice[]
+  userSaved                   UserSavedSeed[]
+  cropPlans                   CropPlan[]
+  cultivationGuides           CultivationGuide[]
+  cultivationMethod           CultivationMethod?
+  diseaseManagement           DiseaseManagement?
+  pestManagement              PestManagement?
+  orderItems                  OrderItem[]
+  marketPrices                MarketPrice[]
+  inventory                   Inventory?
+
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+
+  @@index([seedId])
+  @@index([name])
+  @@index([name_en])
+  @@index([category])
+  @@index([sub_category])
+  @@index([season_id])
+  @@index([difficulty])
+  @@index([organic_certified])
+  @@map("seeds")
+}
+
+model CultivationMethod {
+  id                              String    @id @default(cuid())
+  land_preparation                String
+  land_preparation_bn             String?
+  sowing_time                     String
+  sowing_time_bn                  String?
+  seed_quantity                   String
+  seed_quantity_kg_per_hectare    Float?
+  fertilizer_application          String
+  fertilizer_application_bn       String?
+  irrigation                      String
+  harvesting                      String
+  harvesting_bn                   String?
+  nursery_preparation             String?
+  transplanting                   String?
+  weeding                         String?
+  mulching                        String?
+  intercropping_suggestions       String[]
+  crop_rotation                   String?
+  fertilizer_schedule             Json?
+  organic_fertilizers             String[]
+  chemical_fertilizers            String[]
+  irrigation_schedule             Json?
+  critical_watering_stages        String[]
+
+  seed_id                         String    @unique
+  seed                            Seed      @relation(fields: [seed_id], references: [id])
+
+  createdAt                       DateTime  @default(now())
+  updatedAt                       DateTime  @updatedAt
+
+  @@map("cultivation_methods")
+}
+
+model DiseaseManagement {
+  id                      String            @id @default(cuid())
+  blast                   String?
+  blast_bn                String?
+  stem_rot                String?
+  stem_rot_bn             String?
+  leaf_blight             String?
+  leaf_blight_bn          String?
+  yellow_mosaic           String?
+  yellow_mosaic_bn        String?
+  powdery_mildew          String?
+  powdery_mildew_bn       String?
+  bacterial_blight        String?
+  bacterial_blight_bn     String?
+  other_diseases          Json?
+  disease_severity        DiseaseSeverity?
+  symptoms                String[]
+  prevention_methods      String[]
+  organic_treatment       String[]
+  chemical_treatment      String[]
+  resistant_varieties     String[]
+  biological_control      String[]
+  cultural_control        String[]
+  monitoring_frequency    String?
+  early_warning_signs     String[]
+
+  seed_id                 String    @unique
+  seed                    Seed      @relation(fields: [seed_id], references: [id])
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@map("disease_management")
+}
+
+model PestManagement {
+  id                          String          @id @default(cuid())
+  stem_borer                  String?
+  stem_borer_bn               String?
+  aphids                      String?
+  aphids_bn                   String?
+  armyworm                    String?
+  armyworm_bn                 String?
+  thrips                      String?
+  thrips_bn                   String?
+  pod_borer                   String?
+  pod_borer_bn                String?
+  other_pests                 Json?
+  pest_severity               PestSeverity?
+  symptoms                    String[]
+  prevention_methods          String[]
+  organic_pesticides          String[]
+  chemical_pesticides         String[]
+  biological_control          String[]
+  physical_control            String[]
+  cultural_practices          String[]
+  ipm_strategies              String[]
+  peak_infestation_season     String?
+  favorable_conditions        String[]
+
+  seed_id                     String    @unique
+  seed                        Seed      @relation(fields: [seed_id], references: [id])
+
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  @@map("pest_management")
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  orderId           String        @unique
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+
+  items             OrderItem[]
+  total_amount      Float
+  discount          Float?        @default(0)
+  tax               Float?        @default(0)
+  shipping_cost     Float?        @default(0)
+  grand_total       Float
+
+  status            OrderStatus   @default(PENDING)
+  payment_status    PaymentStatus @default(PENDING)
+  payment_method    String?
+  transaction_id    String?
+
+  shipping_address  String
+  shipping_phone    String
+  delivery_date     DateTime?
+  tracking_number   String?
+
+  notes             String?
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id])
+  seedId      String
+  seed        Seed      @relation(fields: [seedId], references: [id])
+
+  quantity    Int
+  unit_price  Float
+  total_price Float
+
+  @@map("order_items")
+}
+
+model Review {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  seedId            String
+  seed              Seed      @relation(fields: [seedId], references: [id])
+
+  rating            Int
+  title             String?
+  comment           String?
+  comment_bn        String?
+
+  images            String[]
+  verified_purchase Boolean   @default(false)
+  helpful_count     Int       @default(0)
+  reported          Boolean   @default(false)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([userId, seedId])
+  @@index([seedId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model UserSavedSeed {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  seedId    String
+  seed      Seed      @relation(fields: [seedId], references: [id])
+
+  notes     String?
+  savedAt   DateTime  @default(now())
+
+  @@unique([userId, seedId])
+  @@map("user_saved_seeds")
+}
+
+model Query {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  seedId      String?
+  seed        Seed?     @relation(fields: [seedId], references: [id])
+
+  question    String
+  question_bn String?
+  answer      String?
+  answer_bn   String?
+  answeredBy  String?
+  answeredAt  DateTime?
+
+  category    String
+  tags        String[]
+  isPublic    Boolean   @default(true)
+  helpful_count Int     @default(0)
+
+  status      String    @default("pending")
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([seedId])
+  @@index([status])
+  @@map("queries")
+}
+
+model ExpertAdvice {
+  id          String    @id @default(cuid())
+  expertId    String
+  expert      User      @relation("ExpertAdviceExpert", fields: [expertId], references: [id])
+  userId      String?
+  user        User?     @relation("ExpertAdviceUser", fields: [userId], references: [id])
+  seedId      String?
+  seed        Seed?     @relation(fields: [seedId], references: [id])
+
+  title       String
+  content     String
+  content_bn  String?
+  category    String
+  tags        String[]
+
+  images      String[]
+  video_url   String?
+
+  likes       Int       @default(0)
+  shares      Int       @default(0)
+  is_featured Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([expertId])
+  @@index([userId])
+  @@index([seedId])
+  @@index([category])
+  @@index([is_featured])
+  @@map("expert_advice")
+}
+
+model SoilTest {
+  id                        String    @id @default(cuid())
+  userId                    String
+  user                      User      @relation(fields: [userId], references: [id])
+
+  test_date                 DateTime  @default(now())
+  location                  String
+  latitude                  Float?
+  longitude                 Float?
+
+  ph_level                  Float?
+  nitrogen_ppm              Int?
+  phosphorus_ppm            Int?
+  potassium_ppm             Int?
+  organic_matter_percent    Float?
+  soil_texture              String?
+  soil_type                 SoilType?
+  salinity                  Float?
+  moisture_percent          Float?
+
+  fertilizer_recommendation String?
+  crop_recommendation       String[]
+  amendment_suggestions     String[]
+
+  report_pdf                String?
+
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([test_date])
+  @@map("soil_tests")
+}
+
+model CropPlan {
+  id                      String    @id @default(cuid())
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id])
+  seedId                  String
+  seed                    Seed      @relation(fields: [seedId], references: [id])
+  seasonId                String?
+  season                  Season?   @relation(fields: [seasonId], references: [id])
+
+  land_area_hectares      Float
+  expected_planting_date  DateTime
+  expected_harvest_date   DateTime
+
+  seed_quantity_kg        Float
+  fertilizer_plan         Json?
+  irrigation_plan         Json?
+  pest_control_plan       Json?
+
+  estimated_cost          Float
+  estimated_revenue       Float
+  estimated_profit        Float
+
+  status                  String    @default("planned")
+  actual_planting_date    DateTime?
+  actual_harvest_date     DateTime?
+  actual_yield_kg         Float?
+  actual_profit           Float?
+
+  notes                   String?
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([seedId])
+  @@index([status])
+  @@map("crop_plans")
+}
+
+model WeatherData {
+  id              String    @id @default(cuid())
+  location        String
+  district        String
+  division        String
+  date            DateTime
+
+  temperature_max Float
+  temperature_min Float
+  humidity        Float
+  rainfall_mm     Float
+  wind_speed      Float
+  pressure        Float
+  cloud_cover     Float
+
+  forecast_3day   Json?
+  forecast_7day   Json?
+
+  crop_advisory   String?
+  alert_messages  String[]
+
+  createdAt       DateTime  @default(now())
+
+  @@unique([location, date])
+  @@index([date])
+  @@index([district])
+  @@map("weather_data")
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  title       String
+  title_bn    String?
+  message     String
+  message_bn  String?
+  type        String
+  link        String?
+
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model CultivationGuide {
+  id              String    @id @default(cuid())
+  title           String
+  title_bn        String
+  slug            String    @unique
+  content         String
+  content_bn      String
+  excerpt         String
+  excerpt_bn      String
+
+  featured_image  String
+  gallery         String[]
+
+  seedId          String?
+  seed            Seed?     @relation(fields: [seedId], references: [id])
+
+  author          String
+  author_bio      String?
+
+  category        String
+  tags            String[]
+
+  views           Int       @default(0)
+  likes           Int       @default(0)
+  is_published    Boolean   @default(false)
+  published_at    DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([category])
+  @@index([is_published])
+  @@map("cultivation_guides")
+}
+
+model MarketPrice {
+  id              String    @id @default(cuid())
+  seedId          String
+  seed            Seed      @relation(fields: [seedId], references: [id])
+
+  market_name     String
+  district        String
+  wholesale_price Float
+  retail_price    Float
+
+  date            DateTime  @default(now())
+  trend           String?
+
+  createdAt       DateTime  @default(now())
+
+  @@index([seedId])
+  @@index([district])
+  @@index([date])
+  @@map("market_prices")
+}
+
+model GovernmentSubsidy {
+  id                  String    @id @default(cuid())
+  scheme_name         String
+  scheme_name_bn      String
+  description         String
+  description_bn      String
+
+  applicable_crops    String[]
+  eligible_farmers    String[]
+  subsidy_percent     Float
+  max_amount          Float
+
+  application_start   DateTime
+  application_end     DateTime
+  website             String?
+  contact_number      String?
+
+  documents_required  String[]
+  application_process Json?
+
+  is_active           Boolean   @default(true)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([is_active])
+  @@index([application_start, application_end])
+  @@map("government_subsidies")
+}
+
+model FarmerGroup {
+  id                  String    @id @default(cuid())
+  name                String
+  name_bn             String
+  description         String
+  description_bn      String
+
+  location            String
+  district            String
+  division            String
+
+  member_count        Int       @default(0)
+  total_land_hectares Float
+
+  leader_id           String
+  leader              User      @relation("GroupLeader", fields: [leader_id], references: [id])
+
+  crops_cultivated    String[]
+  achievements        String[]
+
+  contact_email       String?
+  contact_phone       String?
+
+  is_verified         Boolean   @default(false)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  members             User[]    @relation("GroupMembers")
+
+  @@index([district])
+  @@map("farmer_groups")
+}
+
+model SensorData {
+  id                  String          @id @default(cuid())
+  device_id           String
+  userId              String
+  user                User            @relation(fields: [userId], references: [id])
+
+  timestamp           DateTime        @default(now())
+
+  soil_moisture       Float?
+  soil_temperature    Float?
+  soil_ec             Float?
+  soil_nitrogen       Int?
+  soil_phosphorus     Int?
+  soil_potassium      Int?
+
+  air_temperature     Float?
+  air_humidity        Float?
+  light_intensity     Float?
+  co2_level           Float?
+
+  crop_health_index   Float?
+  leaf_wetness        Float?
+  growth_stage        CropGrowthStage?
+
+  location_lat        Float?
+  location_lng        Float?
+
+  @@index([device_id])
+  @@index([timestamp])
+  @@index([userId])
+  @@map("sensor_data")
+}
+
+model Inventory {
+  id                  String    @id @default(cuid())
+  seedId              String    @unique
+  seed                Seed      @relation(fields: [seedId], references: [id])
+
+  quantity_kg         Float
+  unit_price          Float
+
+  location            String
+  batch_number        String?
+  expiry_date         DateTime?
+
+  last_restocked      DateTime?
+  next_restock_date   DateTime?
+
+  min_stock_level     Float?
+  max_stock_level     Float?
+
+  status              String    @default("in_stock")
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([seedId])
+  @@index([status])
+  @@map("inventories")
+} 

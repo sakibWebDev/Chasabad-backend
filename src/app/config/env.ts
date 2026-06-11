@@ -13,6 +13,7 @@ export interface EnvConfig {
   NODE_ENV: string;
   PORT: string;
   DATABASE_URL: string;
+  DIRECT_URL: string;
 
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
@@ -120,6 +121,7 @@ const loadEnvVariables = (): EnvConfig => {
     NODE_ENV: process.env.NODE_ENV!,
     PORT: process.env.PORT!,
     DATABASE_URL: process.env.DATABASE_URL!,
+    DIRECT_URL: process.env.DIRECT_URL!,
 
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET!,
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL!,
@@ -147,6 +149,7 @@ const loadEnvVariables = (): EnvConfig => {
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID!,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN!,
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER!,
+    
 
       // SSL_COMMERZ_STORE_ID: process.env.SSL_COMMERZ_STORE_ID!,
       // SSL_COMMERZ_STORE_PASSWORD: process.env.SSL_COMMERZ_STORE_PASSWORD!,
